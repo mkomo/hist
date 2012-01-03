@@ -1,0 +1,88 @@
+#!/bin/bash
+
+HIST_HOME="$HOME"
+HIST_FILENAME=".bash_eternal_history"
+HIST_FILE="$HIST_HOME/$HIST_FILENAME"
+
+ALL_HIST_DIR="/nfshome/$USER/history"
+
+PAGER="tail -50"
+CURRENT_SHELL="cat"
+
+while getopts "brf:g:Aacn:" OPTION
+do
+	case $OPTION in
+		b)
+			UNIQUE_HOST_NAME=$HOSTNAME
+			if which rpm && rpm --quiet -q basesystem
+			then
+				HOST_TIME=`rpm -q --queryformat '%{installtime}' basesystem`
+				HOST_DATE=`date -d @$HOST_TIME +%Y.%m.%d.%H%M`
+				UNIQUE_HOST_NAME="$UNIQUE_HOST_NAME-$HOST_DATE"
+			fi
+			UNIQUE_HOST_NAME="$UNIQUE_HOST_NAME-`hostid`"
+			echo "saving backup to $ALL_HIST_DIR/$UNIQUE_HOST_NAME"
+			cp $HIST_FILE $ALL_HIST_DIR/$UNIQUE_HOST_NAME
+			exit 0
+			;;
+		r)
+			echo '
+hist_entry=$(history 1)		    # grab the most recent command
+hist_entry="${hist_entry# *[0-9]*  }"	 # strip off the history line number
+timestamp="${hist_entry:0:19}"
+command="${hist_entry:20}"
+shell_id=`printf "%5d\n" $$ | sed "s/ /0/g"`
+if [ ${command%% *} == "cd" ]  # if its a cd command, we want the old directory
+then
+	dir=$OLDPWD
+else
+	dir=$PWD
+fi 
+
+hist_line="$timestamp $dir\$ $command"
+if [ -n "${LAST_HISTORY_ENTRY+x}" ] && [ "$hist_line" != "$LAST_HISTORY_ENTRY" ]; then
+	echo "$shell_id $hist_line" >> ~/.bash_eternal_history;
+fi; 
+export LAST_HISTORY_ENTRY="$hist_line"'
+			exit 0
+			;;
+		f)
+			HIST_FILE="$OPTARG"
+			;;
+		g)
+			GREP="$OPTARG"
+			;;
+		A)
+			ALL_MACHINES=1
+			PAGER="cat"
+			;;
+		a)
+			PAGER="cat"
+			;;
+		c)
+			CURRENT_SHELL="egrep ^[0]*$PPID"
+			;;
+		n)
+			PAGER="tail -n $OPTARG"
+	esac
+done
+
+if [ -n "$ALL_MACHINES" ]
+then
+	hist -b
+	cd $ALL_HIST_DIR
+	if [ -z "$GREP" ]
+	then
+		GREP_COLORS="mt=" grep --color=always --with-filename "" * | $PAGER
+	else
+		grep --color=always --with-filename $GREP * | $PAGER
+	fi
+else
+	if [ -z "$GREP" ]
+	then
+		cat $HIST_FILE | $CURRENT_SHELL | grep --color=always "" | $PAGER
+	else
+		cat $HIST_FILE | $CURRENT_SHELL | grep --color=always $GREP | $PAGER
+	fi
+fi
+exit $?
