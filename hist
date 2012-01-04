@@ -4,7 +4,7 @@ HIST_HOME="$HOME"
 HIST_FILENAME=".bash_eternal_history"
 HIST_FILE="$HIST_HOME/$HIST_FILENAME"
 
-ALL_HIST_DIR="/nfshome/$USER/history"
+ALL_HIST_DIR="/nfshome/$LOGNAME/history"
 
 PAGER="tail -50"
 CURRENT_SHELL="cat"
@@ -32,7 +32,7 @@ hist_entry="${hist_entry# *[0-9]*  }"	 # strip off the history line number
 timestamp="${hist_entry:0:19}"
 command="${hist_entry:20}"
 shell_id=`printf "%5d\n" $$ | sed "s/ /0/g"`
-if [ ${command%% *} == "cd" ]  # if its a cd command, we want the old directory
+if [ ${command%% *} == "cd" ]  # if its a cd command, we want the directory from which we changed
 then
 	dir=$OLDPWD
 else
